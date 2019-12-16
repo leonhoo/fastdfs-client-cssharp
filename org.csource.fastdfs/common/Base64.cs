@@ -3,13 +3,56 @@ using System;
 using System.Text;
 
 /// <summary>
-/// Freeware from:Roedy GreenCanadian Mind Products#327 - 964 Heywood AvenueVictoria, BC Canada V8V 2Y5tel:(250) 361-9093mailto:roedy
+/// Freeware from:
+/// Roedy Green
+/// Canadian Mind Products
+/// #327 - 964 Heywood Avenue
+/// Victoria, BC Canada V8V 2Y5
+/// tel:(250) 361-9093
+/// mailto:roedy@mindprod.com
 /// </summary>
 namespace org.csource.fastdfs.common
 {
 
     /// <summary>
-    /// Encode arbitrary binary into printable ASCII using BASE64 encoding.very loosely based on the Base64 Reader byDr. Mark ThorntonOptrak Distribution Software Ltd.http://www.optrak.co.ukand Kevin Kelley's  http://www.ruralnet.net/~kelley/java/Base64.javaBase64 is a way of encoding 8-bit characters using only ASCII printablecharacters similar to UUENCODE.  UUENCODE includes a filename where BASE64 does not.The spec is described in RFC 2045.  Base64 is a scheme where3 bytes are concatenated, then split to form 4 groups of 6-bits each; andeach 6-bits gets translated to an encoded printable ASCII character, via atable lookup.  An encoded string is therefore longer than the original byabout 1/3.  The "=" character is used to pad the end.  Base64 is used,among other things, to encode the user:password string in anAuthorization: header for HTTP.  Don't confuse Base64 withx-www-form-urlencoded which is handled byJava.net.URLEncoder.encode/decodeIf you don't like this code, there is another implementation at http://www.ruffboy.com/download.htmSun has an undocumented method called sun.misc.Base64Encoder.encode.You could use hex, simpler to code, but not as compact.If you wanted to encode a giant file, you could do it in large chunks thatare even multiples of 3 bytes, except for the last chunk, and append the outputs.To encode a string, rather than binary data java.net.URLEncoder may be better. Seeprintable characters in the Java glossary for a discussion of the differences.version 1.4 2002 February 15  -- correct bugs with uneven line lengths,allow you to configure line separator.now need Base64 object and instance methods.new mailing address.version 1.3 2000 September 12 -- fix problems with estimating output length in encodeversion 1.2 2000 September 09 -- now handles decode as well.version 1.1 1999 December 04 -- more symmetrical encoding algorithm.more accurate StringBuilder allocation size.version 1.0 1999 December 03 -- posted in comp.lang.java.programmer.Futures Streams or files.
+    ///Encode arbitrary binary into printable ASCII using BASE64 encoding.
+    ///very loosely based on the Base64 Reader by
+    ///Dr. Mark Thornton
+    ///Optrak Distribution Software Ltd.
+    ///http://www.optrak.co.uk
+    ///and Kevin Kelley's  http://www.ruralnet.net/~kelley/java/Base64.java
+    ///<p>
+    ///Base64 is a way of encoding 8-bit characters using only ASCII printable
+    ///characters similar to UUENCODE.  UUENCODE includes a filename where BASE64 does not.
+    ///The spec is described in RFC 2045.  Base64 is a scheme where
+    ///3 bytes are concatenated, then split to form 4 groups of 6-bits each; and
+    ///each 6-bits gets translated to an encoded printable ASCII character, via a
+    ///table lookup.  An encoded string is therefore longer than the original by
+    ///about 1/3.  The "=" character is used to pad the end.  Base64 is used,
+    ///among other things, to encode the user:password string in an
+    ///Authorization: header for HTTP.  Don't confuse Base64 with
+    ///x-www-form-urlencoded which is handled by
+    ///Java.net.URLEncoder.encode/decode
+    ///If you don't like this code, there is another implementation at http://www.ruffboy.com/download.htm
+    ///Sun has an undocumented method called sun.misc.Base64Encoder.encode.
+    ///You could use hex, simpler to code, but not as compact.
+    ///<p>
+    ///If you wanted to encode a giant file, you could do it in large chunks that
+    ///are even multiples of 3 bytes, except for the last chunk, and append the outputs.
+    ///<p>
+    ///To encode a string, rather than binary data java.net.URLEncoder may be better. See
+    ///printable characters in the Java glossary for a discussion of the differences.
+    ///<p>
+    ///version 1.4 2002 February 15  -- correct bugs with uneven line lengths,
+    ///allow you to configure line separator.
+    ///now need Base64 object and instance methods.
+    ///new mailing address.
+    ///version 1.3 2000 September 12 -- fix problems with estimating output length in encode
+    ///version 1.2 2000 September 09 -- now handles decode as well.
+    ///version 1.1 1999 December 04 -- more symmetrical encoding algorithm.
+    ///more accurate StringBuffer allocation size.
+    ///version 1.0 1999 December 03 -- posted in comp.lang.java.programmer.
+    ///Futures Streams or files.
     /// </summary>
     public class Base64
     {
@@ -31,8 +74,7 @@ namespace org.csource.fastdfs.common
 
         /// <summary>
         /// how we separate lines, e.g. \n, \r\n, \r etc.
-        /// </summary>
-        //private string lineSeparator = System.getProperty("line.separator");
+        /// </summary> 
         private string lineSeparator = Environment.NewLine;
 
         /// <summary>
@@ -97,84 +139,7 @@ namespace org.csource.fastdfs.common
             }
             Console.WriteLine();
         }
-        ///
-        // * test driver
-        // */
-        //public static void main(string[] args)
-        //{
-        //    test();
-        //    System.exit(1);
-        //    if (debug)
-        //    {
-        //        try
-        //        {
-        //            Base64 b64 = new Base64();
-        //            string str = "agfrtu¿¦etÊ²1234¼Ù´óerty¿Õ234·¢¿¦2344Ê²µÄ";
-        //            string str64 = "";
-        //            //encode
-        //            str64 = b64.encode(str.getBytes());
-        //            Console.WriteLine(str64);
-        //            //decode
-        //            byte[] theBytes = b64.decode(str64);
-        //            show(theBytes);
-        //            string rst = new string(theBytes);
-        //            Console.WriteLine(rst);
-        //            Console.WriteLine(str);
-        //        }
-        //        catch (Exception e)
-        //        {
-        //            e.printStackTrace();
-        //        }
-        //        //getBytes(string charsetName);
-        //        /
-        //                 byte[] a = { (byte)0xfc, (byte)0x0f, (byte)0xc0};
-        //                 byte[] b = { (byte)0x03, (byte)0xf0, (byte)0x3f};
-        //                 byte[] c = { (byte)0x00, (byte)0x00, (byte)0x00};
-        //                 byte[] d = { (byte)0xff, (byte)0xff, (byte)0xff};
-        //                 byte[] e = { (byte)0xfc, (byte)0x0f, (byte)0xc0, (byte)1};
-        //                 byte[] f = { (byte)0xfc, (byte)0x0f, (byte)0xc0, (byte)1, (byte)2};
-        //                 byte[] g = { (byte)0xfc, (byte)0x0f, (byte)0xc0, (byte)1, (byte)2, (byte)3};
-        //                 byte[] h = "AAAAAAAAAAB".getBytes();
-        //                 show(a);
-        //                 show(b);
-        //                 show(c);
-        //                 show(d);
-        //                 show(e);
-        //                 show(f);
-        //                 show(g);
-        //                 show(h);
-        //                 Base64 b64 = new Base64();
-        //                 show(b64.decode(b64.encode(a)));
-        //                 show(b64.decode(b64.encode(b)));
-        //                 show(b64.decode(b64.encode(c)));
-        //                 show(b64.decode(b64.encode(d)));
-        //                 show(b64.decode(b64.encode(e)));
-        //                 show(b64.decode(b64.encode(f)));
-        //                 show(b64.decode(b64.encode(g)));
-        //                 show(b64.decode(b64.encode(h)));
-        //                 b64.setLineLength(8);
-        //                 show((b64.encode(h)).getBytes());
-        //        */
-        //    }
-        //}// end main
-        //public static void test()
-        //{
-        //    try
-        //    {
-        //        Base64 b64 = new Base64();
-        //        //encode
-        //        //str64 = b64.encode(str.getBytes());
-        //        //Console.WriteLine(str64);
-        //        string str64 = "CwUEFYoAAAADjQMC7ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267ELJiY6w05267EI=";
-        //        //decode
-        //        byte[] theBytes = b64.decode(str64);
-        //        show(theBytes);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        e.printStackTrace();
-        //    }
-        //}
+
         /* initialise defaultValueToChar and defaultCharToValue tables */
         private void init(char chPlus, char chSplash, char chPad)
         {
@@ -211,7 +176,11 @@ namespace org.csource.fastdfs.common
         }
 
         /// <summary>
-        /// Encode an arbitrary array of bytes as Base64 printable ASCII.It will be broken into lines of 72 chars each.  The last line is notterminated with a line separator.The output will always have an even multiple of data characters,exclusive of \n.  It is padded out with =.
+        /// Encode an arbitrary array of bytes as Base64 printable ASCII.
+        /// It will be broken into lines of 72 chars each.The last line is not
+        /// terminated with a line separator.
+        /// The output will always have an even multiple of data characters,
+        /// exclusive of \n.It is padded out with =.
         /// </summary>
         public string encode(byte[] b)
         {
@@ -366,55 +335,7 @@ namespace org.csource.fastdfs.common
             for (int i = 0; i < len; i++)
             {
                 int c = s[i];
-                int value = (c <= 255) ? charToValue[c] : IGNORE;
-                // there are two magic values PAD (=) and IGNORE.
-                // SOURCE switch (value)
-                //{
-                //    case IGNORE:
-                //        // e.g. \n, just ignore it.
-                //        break;
-                //    case PAD:
-                //        value = 0;
-                //        dummies++;
-                //    // fallthrough
-                //    default:
-                //        /* regular value character */
-                //        switch (cycle)
-                //        {
-                //            case 0:
-                //                combined = value;
-                //                cycle = 1;
-                //                break;
-                //            case 1:
-                //                combined <<= 6;
-                //                combined |= value;
-                //                cycle = 2;
-                //                break;
-                //            case 2:
-                //                combined <<= 6;
-                //                combined |= value;
-                //                cycle = 3;
-                //                break;
-                //            case 3:
-                //                combined <<= 6;
-                //                combined |= value;
-                //                // we have just completed a cycle of 4 chars.
-                //                // the four 6-bit values are in combined in big-endian order
-                //                // peel them off 8 bits at a time working lsb to msb
-                //                // to get our original 3 8-bit bytes back
-                //                b[j + 2] = (byte)combined;
-                //                //combined >>>= 8;
-                //                combined = Bytes.RightMove(combined, 8);
-                //                b[j + 1] = (byte)combined;
-                //                //combined >>>= 8;
-                //                combined = Bytes.RightMove(combined, 8);
-                //                b[j] = (byte)combined;
-                //                j += 3;
-                //                cycle = 0;
-                //                break;
-                //        }
-                //        break;
-                //}
+                int value = (c <= 255) ? charToValue[c] : IGNORE; 
                 if (value == PAD)
                 {
                     value = 0;
@@ -447,11 +368,9 @@ namespace org.csource.fastdfs.common
                             // the four 6-bit values are in combined in big-endian order
                             // peel them off 8 bits at a time working lsb to msb
                             // to get our original 3 8-bit bytes back
-                            b[j + 2] = (byte)combined;
-                            //combined >>>= 8;
+                            b[j + 2] = (byte)combined; 
                             combined = Bytes.RightMove(combined, 8);
-                            b[j + 1] = (byte)combined;
-                            //combined >>>= 8;
+                            b[j + 1] = (byte)combined; 
                             combined = Bytes.RightMove(combined, 8);
                             b[j] = (byte)combined;
                             j += 3;
@@ -467,8 +386,7 @@ namespace org.csource.fastdfs.common
             j -= dummies;
             if (b.Length != j)
             {
-                byte[] b2 = new byte[j];
-                // SOUNCE Array.Copy(b, 0, b2, 0, j);
+                byte[] b2 = new byte[j]; 
                 Array.Copy(b, 0, b2, 0, j);
                 b = b2;
             }

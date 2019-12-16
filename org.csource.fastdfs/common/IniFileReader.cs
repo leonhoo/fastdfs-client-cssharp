@@ -25,7 +25,6 @@ public class IniFileReader
         Stream stream = null;
         try
         {
-            System.IO.FileInfo fi = new System.IO.FileInfo(filePath);
             // 优先从文件系统路径加载
             if (File.Exists(filePath))
             {

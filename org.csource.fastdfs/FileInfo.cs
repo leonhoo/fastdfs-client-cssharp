@@ -2,16 +2,29 @@ using org.csource.fastdfs.encapsulation;
 using System;
 
 /// <summary>
-/// Copyright (C) 2008 Happy Fish / YuQingFastDFS Java Client may be copied only under the terms of the GNU LesserGeneral Public License (LGPL).Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
+/// Copyright (C) 2008 Happy Fish / YuQing
+/// <p>
+/// FastDFS Java Client may be copied only under the terms of the GNU Lesser
+/// General Public License (LGPL).
+/// Please visit the FastDFS Home Page https://github.com/happyfish100/fastdfs for more detail.
 /// </summary>
 namespace org.csource.fastdfs
 {
 
     /// <summary>
     /// Server Info
+    ///
+    /// @author Happy Fish / YuQing
+    /// @version Version 1.23
     /// </summary>
     public class FileInfo
     {
+        public const short FILE_TYPE_NORMAL = 1;
+        public const short FILE_TYPE_APPENDER = 2;
+        public const short FILE_TYPE_SLAVE = 4;
+
+        protected bool fetch_from_server;
+        protected short file_type;
         protected string source_ip_addr;
         protected long file_size;
         protected DateTime create_timestamp;
@@ -24,13 +37,50 @@ namespace org.csource.fastdfs
         /// <param name="create_timestamp">create timestamp in seconds</param>
         /// <param name="crc32">the crc32 signature</param>
         /// <param name="source_ip_addr">the source storage ip address</param>
-        public FileInfo(long file_size, int create_timestamp, int crc32, string source_ip_addr)
+        public FileInfo(bool fetch_from_server, short file_type, long file_size, int create_timestamp, int crc32, string source_ip_addr)
         {
+            this.fetch_from_server = fetch_from_server;
+            this.file_type = file_type;
             this.file_size = file_size;
-            //this.create_timestamp = new Date(create_timestamp * 1000L);
             this.create_timestamp = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(create_timestamp);
             this.crc32 = crc32;
             this.source_ip_addr = source_ip_addr;
+        }
+
+        /// <summary>
+        /// get the fetch_from_server flag
+        /// </summary>
+        /// <returns>the fetch_from_server flag</returns>
+        public bool getFetchFromServer()
+        {
+            return this.fetch_from_server;
+        }
+
+        /// <summary>
+        /// set the fetch_from_server flag
+        /// </summary>
+        /// <param name="fetch_from_server">the fetch from server flag</param>
+        public void setFetchFromServer(bool fetch_from_server)
+        {
+            this.fetch_from_server = fetch_from_server;
+        }
+
+        /// <summary>
+        /// get the file type
+        /// </summary>
+        /// <returns>the file type</returns>
+        public short getFileType()
+        {
+            return this.file_type;
+        }
+
+        /// <summary>
+        /// set the file type
+        /// </summary>
+        /// <param name="file_type">the file type</param>
+        public void setFileType(short file_type)
+        {
+            this.file_type = file_type;
         }
 
         /// <summary>
@@ -84,7 +134,6 @@ namespace org.csource.fastdfs
         /// <param name="create_timestamp">create timestamp in seconds</param>
         public void setCreateTimestamp(int create_timestamp)
         {
-            //this.create_timestamp = new Date(create_timestamp * 1000L);
             this.create_timestamp = Dates.Get(create_timestamp * 1000L);
         }
 
@@ -112,11 +161,14 @@ namespace org.csource.fastdfs
         /// <returns> string</returns>
         public string toString()
         {
-            var format = ("yyyy-MM-dd HH:mm:ss");
-            return "source_ip_addr = " + this.source_ip_addr + ", " +
-            "file_size = " + this.file_size + ", " +
-            "create_timestamp = " + this.create_timestamp.ToString(format) + ", " +
-            "crc32 = " + this.crc32;
+            var format = "yyyy-MM-dd HH:mm:ss";
+
+            return "fetch_from_server = " + this.fetch_from_server + ", " +
+      "file_type = " + this.file_type + ", " +
+      "source_ip_addr = " + this.source_ip_addr + ", " +
+      "file_size = " + this.file_size + ", " +
+      "create_timestamp = " + this.create_timestamp.ToString(format) + ", " +
+      "crc32 = " + this.crc32;
         }
     }
 }

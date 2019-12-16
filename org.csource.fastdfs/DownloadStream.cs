@@ -1,9 +1,13 @@
+using System;
 using System.IO;
 namespace org.csource.fastdfs
 {
 
     /// <summary>
-    /// Download file by stream (download callback class)
+    /// Download file by stream(download callback class)
+    ///
+    /// @author zhouzezhong & Happy Fish / YuQing
+    /// @version Version 1.11
     /// </summary>
     public class DownloadStream : DownloadCallback
     {
@@ -29,7 +33,8 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                throw ex;
+                Console.WriteLine(ex.Message + ex.StackTrace);
+                return -1;
             }
             currentBytes += bytes;
             if (this.currentBytes == fileSize)

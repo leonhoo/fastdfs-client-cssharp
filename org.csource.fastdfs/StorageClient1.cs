@@ -8,6 +8,10 @@ namespace org.csource.fastdfs
 
     /// <summary>
     /// Storage client for 1 field file id: combined group name and filename
+    /// Note: the instance of this class is NOT thread safe !!!
+    ///      if not necessary, do NOT set storage server instance
+    /// @author Happy Fish / YuQing
+    /// @version Version 1.27
     /// </summary>
     public class StorageClient1 : StorageClient
     {
@@ -21,13 +25,23 @@ namespace org.csource.fastdfs
         }
 
         /// <summary>
-        /// constructor
+        /// constructor with trackerServer
+        /// </summary>
+        /// <param name="trackerServer">the tracker server, can be null</param>
+        public StorageClient1(TrackerServer trackerServer) : base(trackerServer)
+        {
+        }
+
+        /// <summary>
+        /// constructor with trackerServer and storageServer
+        /// NOTE: if not necessary, do NOT set storage server instance
         /// </summary>
         /// <param name="trackerServer">the tracker server, can be null</param>
         /// <param name="storageServer">the storage server, can be null</param>
         public StorageClient1(TrackerServer trackerServer, StorageServer storageServer) : base(trackerServer, storageServer)
         {
         }
+
         public static byte split_file_id(string file_id, string[] results)
         {
             int pos = file_id.IndexOf(SPLIT_GROUP_NAME_AND_FILENAME_SEPERATOR);
@@ -530,6 +544,31 @@ namespace org.csource.fastdfs
                 return this.errno;
             }
             return this.modify_file(parts[0], parts[1], file_offset, modify_size, callback);
+        }
+
+        /// <summary>
+        /// regenerate filename for appender file
+        /// </summary>
+        /// <param name="appender_file_id">the appender file id</param>
+        /// <returns>the regenerated file id, return null if fail</returns>
+        public string regenerate_appender_filename1(string appender_file_id)
+        {
+            string[] parts = new string[2];
+            this.errno = split_file_id(appender_file_id, parts);
+            if (this.errno != 0)
+            {
+                return null;
+            }
+
+            string[] new_parts = this.regenerate_appender_filename(parts[0], parts[1]);
+            if (new_parts != null)
+            {
+                return new_parts[0] + SPLIT_GROUP_NAME_AND_FILENAME_SEPERATOR + new_parts[1];
+            }
+            else
+            {
+                return null;
+            }
         }
 
         /// <summary>

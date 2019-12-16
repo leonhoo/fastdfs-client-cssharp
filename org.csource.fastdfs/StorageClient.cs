@@ -4,13 +4,22 @@ using System;
 using System.IO;
 
 /// <summary>
-/// Copyright (C) 2008 Happy Fish / YuQingFastDFS Java Client may be copied only under the terms of the GNU LesserGeneral Public License (LGPL).Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
+/// Copyright (C) 2008 Happy Fish / YuQing
+/// <p>
+/// FastDFS Java Client may be copied only under the terms of the GNU Lesser
+/// General Public License (LGPL).
+/// Please visit the FastDFS Home Page https://github.com/happyfish100/fastdfs for more detail.
 /// </summary>
 namespace org.csource.fastdfs
 {
 
     /// <summary>
     /// Storage client for 2 fields file id: group name and filename
+    /// Note: the instance of this class is NOT thread safe !!!
+    ///       if not necessary, do NOT set storage server instance
+    ///
+    /// @author Happy Fish / YuQing
+    /// @version Version 1.27
     /// </summary>
     public class StorageClient
     {
@@ -29,7 +38,18 @@ namespace org.csource.fastdfs
         }
 
         /// <summary>
+        /// constructor with tracker server 
+        /// </summary>
+        /// <param name="trackerServer">the tracker server, can be null</param>
+        public StorageClient(TrackerServer trackerServer)
+        {
+            this.trackerServer = trackerServer;
+            this.storageServer = null;
+        }
+
+        /// <summary>
         /// constructor with tracker server and storage server
+        /// NOTE: if not necessary, do NOT set storage server instance
         /// </summary>
         /// <param name="trackerServer">the tracker server, can be null</param>
         /// <param name="storageServer">the storage server, can be null</param>
@@ -203,16 +223,16 @@ namespace org.csource.fastdfs
             {
                 throw new MyException("invalid arguement");
             }
+            if (file_ext_name == null)
+            {
+                int nPos = local_filename.LastIndexOf('.');
+                if (nPos > 0 && local_filename.Length - nPos <= ProtoCommon.FDFS_FILE_EXT_NAME_MAX_LEN + 1)
+                {
+                    file_ext_name = local_filename.Substring(nPos + 1);
+                }
+            }
             using (var fis = new FileStream(local_filename, FileMode.Open))
             {
-                if (file_ext_name == null)
-                {
-                    int nPos = local_filename.LastIndexOf('.');
-                    if (nPos > 0 && local_filename.Length - nPos <= ProtoCommon.FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-                    {
-                        file_ext_name = local_filename.Substring(nPos + 1);
-                    }
-                }
                 return this.do_upload_file(ProtoCommon.STORAGE_PROTO_CMD_UPLOAD_SLAVE_FILE, group_name, master_filename, prefix_name,
                 file_ext_name, fis.Length, new UploadStream(fis, fis.Length), meta_list);
             }
@@ -517,6 +537,115 @@ namespace org.csource.fastdfs
             modify_size, callback);
         }
 
+        /**
+   * regenerate filename for appender file
+   *
+   * @param group_name        the group name of appender file
+   * @param appender_filename the appender filename
+   * @return 2 elements string array if success:<br>
+   * <ul><li> results[0]: the group name to store the file</li></ul>
+   * <ul><li> results[1]: the new created filename</li></ul>
+   * return null if fail
+   */
+        public string[] regenerate_appender_filename(string group_name, string appender_filename)
+        {
+            byte[] header;
+            bool bNewConnection;
+            JavaSocket storageSocket;
+            byte[] hexLenBytes;
+            byte[] appenderFilenameBytes;
+            int offset;
+            long body_len;
+
+            if ((group_name == null || group_name.Length == 0) ||
+              (appender_filename == null || appender_filename.Length == 0))
+            {
+                this.errno = ProtoCommon.ERR_NO_EINVAL;
+                return null;
+            }
+
+            bNewConnection = this.newUpdatableStorageConnection(group_name, appender_filename);
+
+            try
+            {
+                storageSocket = this.storageServer.getSocket();
+
+                appenderFilenameBytes = ClientGlobal.g_charset.GetBytes(appender_filename);
+                body_len = appenderFilenameBytes.Length;
+
+                header = ProtoCommon.packHeader(ProtoCommon.STORAGE_PROTO_CMD_REGENERATE_APPENDER_FILENAME, body_len, (byte)0);
+                byte[] wholePkg = new byte[(int)(header.Length + body_len)];
+                Array.Copy(header, 0, wholePkg, 0, header.Length);
+                offset = header.Length;
+
+                Array.Copy(appenderFilenameBytes, 0, wholePkg, offset, appenderFilenameBytes.Length);
+                offset += appenderFilenameBytes.Length;
+
+                var outStream = storageSocket.getOutputStream();
+                outStream.Write(wholePkg, 0, wholePkg.Length);
+
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                    ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
+                this.errno = pkgInfo.errno;
+                if (pkgInfo.errno != 0)
+                {
+                    return null;
+                }
+
+                if (pkgInfo.body.Length <= ProtoCommon.FDFS_GROUP_NAME_MAX_LEN)
+                {
+                    throw new MyException("body length: " + pkgInfo.body.Length + " <= " + ProtoCommon.FDFS_GROUP_NAME_MAX_LEN);
+                }
+
+                string new_group_name = Strings.Get(pkgInfo.body, 0, ProtoCommon.FDFS_GROUP_NAME_MAX_LEN).Trim();
+                string remote_filename = Strings.Get(pkgInfo.body, ProtoCommon.FDFS_GROUP_NAME_MAX_LEN,
+                        pkgInfo.body.Length - ProtoCommon.FDFS_GROUP_NAME_MAX_LEN);
+                string[] results = new string[2];
+                results[0] = new_group_name;
+                results[1] = remote_filename;
+
+                return results;
+            }
+            catch (IOException ex)
+            {
+                if (!bNewConnection)
+                {
+                    try
+                    {
+                        this.storageServer.close();
+                    }
+                    catch (IOException ex1)
+                    {
+                        Console.WriteLine(ex1.Message + ex1.StackTrace);
+                    }
+                    finally
+                    {
+                        this.storageServer = null;
+                    }
+                }
+
+                throw ex;
+            }
+            finally
+            {
+                if (bNewConnection)
+                {
+                    try
+                    {
+                        this.storageServer.close();
+                    }
+                    catch (IOException ex1)
+                    {
+                        Console.WriteLine(ex1.Message + ex1.StackTrace);
+                    }
+                    finally
+                    {
+                        this.storageServer = null;
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// upload file to storage server
         /// </summary>
@@ -621,7 +750,9 @@ namespace org.csource.fastdfs
                     Array.Copy(masterFilenameBytes, 0, wholePkg, offset, masterFilenameBytes.Length);
                     offset += masterFilenameBytes.Length;
                 }
+
                 outStream.Write(wholePkg, 0, wholePkg.Length);
+
                 if ((this.errno = (byte)callback.send(outStream)) != 0)
                 {
                     return null;
@@ -867,8 +998,9 @@ namespace org.csource.fastdfs
                     {
                         this.storageServer.close();
                     }
-                    catch
+                    catch (Exception ex1)
                     {
+                        Console.WriteLine(ex1.Message + ex1.StackTrace);
                     }
                     finally
                     {
@@ -885,8 +1017,9 @@ namespace org.csource.fastdfs
                     {
                         this.storageServer.close();
                     }
-                    catch
+                    catch (Exception ex1)
                     {
+                        Console.WriteLine(ex1.Message + ex1.StackTrace);
                     }
                     finally
                     {
@@ -1522,27 +1655,55 @@ namespace org.csource.fastdfs
             }
             byte[] buff = base64.decodeAuto(remote_filename.Substring(ProtoCommon.FDFS_FILE_PATH_LEN,
             ProtoCommon.FDFS_FILE_PATH_LEN + ProtoCommon.FDFS_FILENAME_BASE64_LENGTH));
+
+            short file_type;
             long file_size = ProtoCommon.buff2long(buff, 4 * 2);
-            if (((remote_filename.Length > ProtoCommon.TRUNK_LOGIC_FILENAME_LENGTH) ||
-            ((remote_filename.Length > ProtoCommon.NORMAL_LOGIC_FILENAME_LENGTH) && ((file_size & ProtoCommon.TRUNK_FILE_MARK_SIZE) == 0))) ||
-            ((file_size & ProtoCommon.APPENDER_FILE_SIZE) != 0))
+            //if (((remote_filename.Length > ProtoCommon.TRUNK_LOGIC_FILENAME_LENGTH) ||
+            //((remote_filename.Length > ProtoCommon.NORMAL_LOGIC_FILENAME_LENGTH) && ((file_size & ProtoCommon.TRUNK_FILE_MARK_SIZE) == 0))) ||
+            //((file_size & ProtoCommon.APPENDER_FILE_SIZE) != 0))
+            //{ //slave file or appender file
+
+
+            if (((file_size & ProtoCommon.APPENDER_FILE_SIZE) != 0))
+            {
+                file_type = FileInfo.FILE_TYPE_APPENDER;
+            }
+            else if ((remote_filename.Length > ProtoCommon.TRUNK_LOGIC_FILENAME_LENGTH) ||
+                    ((remote_filename.Length > ProtoCommon.NORMAL_LOGIC_FILENAME_LENGTH) &&
+                     ((file_size & ProtoCommon.TRUNK_FILE_MARK_SIZE) == 0)))
+            {
+                file_type = FileInfo.FILE_TYPE_SLAVE;
+            }
+            else
+            {
+                file_type = FileInfo.FILE_TYPE_NORMAL;
+            }
+
+            if (file_type == FileInfo.FILE_TYPE_SLAVE ||
+                file_type == FileInfo.FILE_TYPE_APPENDER)
             { //slave file or appender file
                 FileInfo fi = this.query_file_info(group_name, remote_filename);
                 if (fi == null)
                 {
                     return null;
                 }
+                fi.setFileType(file_type);
                 return fi;
             }
-            FileInfo fileInfo = new FileInfo(file_size, 0, 0, ProtoCommon.getIpAddress(buff, 0));
-            fileInfo.setCreateTimestamp(ProtoCommon.buff2int(buff, 4));
+            //FileInfo fileInfo = new FileInfo(file_size, 0, 0, ProtoCommon.getIpAddress(buff, 0));
+            //fileInfo.setCreateTimestamp(ProtoCommon.buff2int(buff, 4));
+
+            int create_timestamp = ProtoCommon.buff2int(buff, 4);
             if ((file_size >> 63) != 0)
             {
                 file_size &= 0xFFFFFFFFL;  //low 32 bits is file size
-                fileInfo.setFileSize(file_size);
+                //fileInfo.setFileSize(file_size);
             }
-            fileInfo.setCrc32(ProtoCommon.buff2int(buff, 4 * 4));
-            return fileInfo;
+            //fileInfo.setCrc32(ProtoCommon.buff2int(buff, 4 * 4));
+            int crc32 = ProtoCommon.buff2int(buff, 4 * 4);
+            //return fileInfo;
+            return new FileInfo(false, file_type, file_size, create_timestamp,
+            crc32, ProtoCommon.getIpAddress(buff, 0));
         }
 
         /// <summary>
@@ -1597,7 +1758,9 @@ namespace org.csource.fastdfs
                 int create_timestamp = (int)ProtoCommon.buff2long(pkgInfo.body, ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE);
                 int crc32 = (int)ProtoCommon.buff2long(pkgInfo.body, 2 * ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE);
                 string source_ip_addr = (Strings.Get(pkgInfo.body, 3 * ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE, ProtoCommon.FDFS_IPADDR_SIZE)).Trim();
-                return new FileInfo(file_size, create_timestamp, crc32, source_ip_addr);
+                //return new FileInfo(file_size, create_timestamp, crc32, source_ip_addr);
+                return new FileInfo(true, FileInfo.FILE_TYPE_NORMAL, file_size,
+                create_timestamp, crc32, source_ip_addr);
             }
             catch (IOException ex)
             {
