@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <SignAssembly>true</SignAssembly>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyVersion>1.26.0.0</AssemblyVersion>
+    <FileVersion>1.26.0.0</FileVersion>
+    <Version>1.26</Version>
+    <Description>Translated from java to C#, no optimization, Usage reference: https://github.com/happyfish100/fastdfs-client-java </Description>
+    <Product>fastdfs-client-cssharp</Product>
+    <Authors>leon</Authors>
+    <Copyright>happyfish100</Copyright>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/leonhoo/fastdfs-client-cssharp</RepositoryUrl>
+    <Title>fastdfs client cssharp</Title>
+    <PackageProjectUrl>https://github.com/leonhoo/fastdfs-client-cssharp</PackageProjectUrl>
+  </PropertyGroup>
+</Project>
