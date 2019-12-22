@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29102.190
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "org.csource.fastdfs", "org.csource.fastdfs\org.csource.fastdfs.csproj", "{3F3E0323-631F-4D9C-A6F2-CC1442E0C754}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "org.csource.fastdfs", "org.csource.fastdfs\org.csource.fastdfs.csproj", "{3F3E0323-631F-4D9C-A6F2-CC1442E0C754}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "org.csource.fastdfs.test", "org.csource.fastdfs.test\org.csource.fastdfs.test.csproj", "{80F05BBF-FF88-4175-82E7-4562BE273AD7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{3F3E0323-631F-4D9C-A6F2-CC1442E0C754}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F3E0323-631F-4D9C-A6F2-CC1442E0C754}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F3E0323-631F-4D9C-A6F2-CC1442E0C754}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80F05BBF-FF88-4175-82E7-4562BE273AD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80F05BBF-FF88-4175-82E7-4562BE273AD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80F05BBF-FF88-4175-82E7-4562BE273AD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80F05BBF-FF88-4175-82E7-4562BE273AD7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
