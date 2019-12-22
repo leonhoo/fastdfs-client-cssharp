@@ -159,7 +159,7 @@ namespace org.csource.fastdfs
         /// to string
         /// </summary>
         /// <returns> string</returns>
-        public string toString()
+        public override string ToString()
         {
             var format = "yyyy-MM-dd HH:mm:ss";
 

@@ -4,9 +4,9 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <SignAssembly>true</SignAssembly>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <AssemblyVersion>1.27.0.0</AssemblyVersion>
-    <FileVersion>1.27.0.0</FileVersion>
-    <Version>1.27</Version>
+    <AssemblyVersion>1.27.0.3</AssemblyVersion>
+    <FileVersion>1.27.0.3</FileVersion>
+    <Version>1.27.0.3</Version>
     <Description>Translated from java to C#, no optimization, Usage reference: https://github.com/happyfish100/fastdfs-client-java </Description>
     <Product>fastdfs-client-cssharp</Product>
     <Authors>leon</Authors>

@@ -20,7 +20,7 @@ namespace org.csource.fastdfs
     /// @author Happy Fish / YuQing
     /// @version Version 1.11
     /// </summary>
-    public class ClientGlobal
+    public partial class ClientGlobal
     {
         public const string CONF_KEY_CONNECT_TIMEOUT = "connect_timeout";
         public const string CONF_KEY_NETWORK_TIMEOUT = "network_timeout";
@@ -205,7 +205,7 @@ namespace org.csource.fastdfs
         public static JavaSocket getSocket(string ip_addr, int port)
         {
             JavaSocket sock = new JavaSocket();
-            sock.SendTimeout = (ClientGlobal.g_network_timeout);
+            sock.SendTimeout = g_network_timeout;
             sock.Connect(ip_addr, port);
             return sock;
         }
@@ -225,7 +225,7 @@ namespace org.csource.fastdfs
         }
         public static void setG_connect_timeout(int connect_timeout)
         {
-            ClientGlobal.g_connect_timeout = connect_timeout;
+            g_connect_timeout = connect_timeout;
         }
         public static int getG_network_timeout()
         {
@@ -233,7 +233,7 @@ namespace org.csource.fastdfs
         }
         public static void setG_network_timeout(int network_timeout)
         {
-            ClientGlobal.g_network_timeout = network_timeout;
+            g_network_timeout = network_timeout;
         }
         public static string getG_charset()
         {
@@ -241,7 +241,7 @@ namespace org.csource.fastdfs
         }
         public static void setG_charset(string charset)
         {
-            ClientGlobal.g_charset = Encoding.GetEncoding(charset);
+            g_charset = Encoding.GetEncoding(charset);
         }
         public static int getG_tracker_http_port()
         {
@@ -249,7 +249,7 @@ namespace org.csource.fastdfs
         }
         public static void setG_tracker_http_port(int tracker_http_port)
         {
-            ClientGlobal.g_tracker_http_port = tracker_http_port;
+            g_tracker_http_port = tracker_http_port;
         }
         public static bool getG_anti_steal_token()
         {
@@ -261,7 +261,7 @@ namespace org.csource.fastdfs
         }
         public static void setG_anti_steal_token(bool anti_steal_token)
         {
-            ClientGlobal.g_anti_steal_token = anti_steal_token;
+            g_anti_steal_token = anti_steal_token;
         }
         public static string getG_secret_key()
         {
@@ -269,7 +269,7 @@ namespace org.csource.fastdfs
         }
         public static void setG_secret_key(string secret_key)
         {
-            ClientGlobal.g_secret_key = secret_key;
+            g_secret_key = secret_key;
         }
         public static TrackerGroup getG_tracker_group()
         {
@@ -277,7 +277,7 @@ namespace org.csource.fastdfs
         }
         public static void setG_tracker_group(TrackerGroup tracker_group)
         {
-            ClientGlobal.g_tracker_group = tracker_group;
+            g_tracker_group = tracker_group;
         }
         public static string configInfo()
         {

@@ -32,18 +32,23 @@ namespace org.csource.fastdfs.encapsulation
                     }
                     name = parts[0].Trim();
                     value = parts[1].Trim();
-                    this.paramTable.TryGetValue(name, out obj);
-                    if (obj == null)
-                    {
-                        this.paramTable.Add(name, value);
-                    }
-                    else
-                    {
-                        this.paramTable[name] = value;
-                    }
+                    put(name, value);
                 }
             }
         }
+
+        public void put(string k, string v)
+        {
+            if (paramTable.ContainsKey(k))
+            {
+                this.paramTable[k] = v;
+            }
+            else
+            {
+                this.paramTable.Add(k, v);
+            }
+        }
+
         public string getProperty(string key)
         {
             if (paramTable.TryGetValue(key, out string obj))
