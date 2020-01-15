@@ -54,10 +54,10 @@ namespace org.csource.fastdfs
                 TrackerGroup tg = new TrackerGroup(new InetSocketAddress[] { new InetSocketAddress("47.95.221.159", 22122) });
                 TrackerClient tc = new TrackerClient(tg);
 
-                TrackerServer ts = tc.getConnection();
+                TrackerServer ts = tc.getTrackerServer();
                 if (ts == null)
                 {
-                    Console.WriteLine("getConnection return null");
+                    Console.WriteLine("getTrackerServer return null");
                     return;
                 }
 

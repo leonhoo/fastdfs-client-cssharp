@@ -19,7 +19,7 @@ namespace org.csource.fastdfs
         /// <param name="ip_addr">the ip address of storage server</param>
         /// <param name="port">the port of storage server</param>
         /// <param name="store_path">the store path index on the storage server</param>
-        public StorageServer(string ip_addr, int port, int store_path) : base(ClientGlobal.getSocket(ip_addr, port), new InetSocketAddress(ip_addr, port))
+        public StorageServer(string ip_addr, int port, int store_path) : base(new InetSocketAddress(ip_addr, port))
         {
             this.store_path_index = store_path;
         }
@@ -30,7 +30,7 @@ namespace org.csource.fastdfs
         /// <param name="ip_addr">the ip address of storage server</param>
         /// <param name="port">the port of storage server</param>
         /// <param name="store_path">the store path index on the storage server</param>
-        public StorageServer(string ip_addr, int port, byte store_path) : base(ClientGlobal.getSocket(ip_addr, port), new InetSocketAddress(ip_addr, port))
+        public StorageServer(string ip_addr, int port, byte store_path) : base(new InetSocketAddress(ip_addr, port))
         {
             if (store_path < 0)
             {

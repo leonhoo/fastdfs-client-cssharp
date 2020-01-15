@@ -72,6 +72,19 @@ namespace org.csource.fastdfs
             {
                 g_secret_key = config.SecretKey;
             }
+            g_connection_pool_enabled = config.ConnectionPoolEnabled;
+            g_connection_pool_max_count_per_entry = config.ConnectionPoolMaxCountPerEntry;
+            g_connection_pool_max_idle_time = config.ConnectionPoolMaxIdleTime;
+            if (g_connection_pool_max_idle_time < 0)
+            {
+                g_connection_pool_max_idle_time = DEFAULT_CONNECTION_POOL_MAX_IDLE_TIME;
+            }
+            g_connection_pool_max_idle_time *= 1000;
+            g_connection_pool_max_wait_time_in_ms = config.ConnectionPoolMaxWaitTime;
+            if (g_connection_pool_max_wait_time_in_ms < 0)
+            {
+                g_connection_pool_max_wait_time_in_ms = DEFAULT_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS;
+            }
         }
     }
 }

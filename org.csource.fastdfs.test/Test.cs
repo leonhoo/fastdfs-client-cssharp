@@ -53,7 +53,7 @@ namespace org.csource.fastdfs
                 Console.WriteLine("charset=" + ClientGlobal.g_charset);
 
                 TrackerClient tracker = new TrackerClient();
-                TrackerServer trackerServer = tracker.getConnection();
+                TrackerServer trackerServer = tracker.getTrackerServer();
                 StorageServer storageServer = null;
                 StorageClient1 client = new StorageClient1(trackerServer, storageServer);
 
@@ -68,8 +68,7 @@ namespace org.csource.fastdfs
                     byte[] result = client.download_file1(fileId);
                     Console.WriteLine(i + ", download result is: " + result.Length);
                 }
-
-                trackerServer.close();
+                 
             }
             catch (Exception ex)
             {

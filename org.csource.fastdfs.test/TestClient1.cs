@@ -63,7 +63,7 @@ namespace org.csource.fastdfs
                 string file_id;
 
                 TrackerClient tracker = new TrackerClient();
-                TrackerServer trackerServer = tracker.getConnection();
+                TrackerServer trackerServer = tracker.getTrackerServer();
 
                 StorageServer storageServer = null;
                 /*
@@ -305,13 +305,10 @@ namespace org.csource.fastdfs
                 }
 
                 /* for test only */
-                Console.WriteLine("active test to storage server: " + ProtoCommon.activeTest(storageServer.getSocket()));
-                storageServer.close();
+                Console.WriteLine("active test to storage server: " + storageServer.getConnection().activeTest());
 
                 /* for test only */
-                Console.WriteLine("active test to tracker server: " + ProtoCommon.activeTest(trackerServer.getSocket()));
-
-                trackerServer.close();
+                Console.WriteLine("active test to tracker server: " + trackerServer.getConnection().activeTest());
             }
             catch (Exception ex)
             {

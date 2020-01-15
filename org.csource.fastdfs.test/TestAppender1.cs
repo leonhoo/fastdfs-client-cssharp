@@ -60,7 +60,7 @@ namespace org.csource.fastdfs
                 long startTime;
                 ServerInfo[] servers;
                 TrackerClient tracker = new TrackerClient();
-                TrackerServer trackerServer = tracker.getConnection();
+                TrackerServer trackerServer = tracker.getTrackerServer();
 
                 StorageServer storageServer = null;
 
@@ -339,15 +339,12 @@ namespace org.csource.fastdfs
                     Console.WriteLine("getFetchStorage fail, errno code: " + tracker.getErrorCode());
                     return;
                 }
-                /* for test only */
-                Console.WriteLine("active test to storage server: " + ProtoCommon.activeTest(storageServer.getSocket()));
-
-                storageServer.close();
 
                 /* for test only */
-                Console.WriteLine("active test to tracker server: " + ProtoCommon.activeTest(trackerServer.getSocket()));
+                Console.WriteLine("active test to storage server: " + storageServer.getConnection().activeTest());
 
-                trackerServer.close();
+                /* for test only */
+                Console.WriteLine("active test to tracker server: " + trackerServer.getConnection().activeTest());
             }
             catch (Exception ex)
             {

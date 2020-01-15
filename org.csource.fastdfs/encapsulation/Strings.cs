@@ -99,5 +99,10 @@ namespace org.csource.fastdfs.encapsulation
             }
             return result.ToArray();
         }
+
+        public static string Get(byte[] body, Encoding charset)
+        {
+            return charset.GetString(body);
+        }
     }
 }

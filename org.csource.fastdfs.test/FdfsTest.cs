@@ -35,7 +35,7 @@ namespace org.csource.fastdfs
             Log.Information("network_timeout=" + ClientGlobal.g_network_timeout + "ms");
             Log.Information("charset=" + ClientGlobal.g_charset);
             TrackerClient tracker = new TrackerClient();
-            trackerServer = tracker.getConnection();
+            trackerServer = tracker.getTrackerServer();
             StorageServer storageServer = null;
             storageClient = new StorageClient(trackerServer, storageServer);
         }

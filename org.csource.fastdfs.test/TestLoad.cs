@@ -110,7 +110,7 @@ namespace org.csource.fastdfs
             public Uploader()
             {
                 this.tracker = new TrackerClient();
-                this.trackerServer = tracker.getConnection();
+                this.trackerServer = tracker.getTrackerServer();
             }
 
             public int uploadFile()
@@ -158,7 +158,7 @@ namespace org.csource.fastdfs
             public Downloader()
             {
                 this.tracker = new TrackerClient();
-                this.trackerServer = tracker.getConnection();
+                this.trackerServer = tracker.getTrackerServer();
                 this.callback = new DownloadFileDiscard();
             }
 

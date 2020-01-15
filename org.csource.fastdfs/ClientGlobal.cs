@@ -37,18 +37,36 @@ namespace org.csource.fastdfs
         public const string PROP_KEY_HTTP_SECRET_KEY = "fastdfs.http_secret_key";
         public const string PROP_KEY_HTTP_TRACKER_HTTP_PORT = "fastdfs.http_tracker_http_port";
         public const string PROP_KEY_TRACKER_SERVERS = "fastdfs.tracker_servers";
+
+        public const string PROP_KEY_CONNECTION_POOL_ENABLED = "fastdfs.connection_pool.enabled";
+        public const string PROP_KEY_CONNECTION_POOL_MAX_COUNT_PER_ENTRY = "fastdfs.connection_pool.max_count_per_entry";
+        public const string PROP_KEY_CONNECTION_POOL_MAX_IDLE_TIME = "fastdfs.connection_pool.max_idle_time";
+        public const string PROP_KEY_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS = "fastdfs.connection_pool.max_wait_time_in_ms";
+
         public const int DEFAULT_CONNECT_TIMEOUT = 5; //second
         public const int DEFAULT_NETWORK_TIMEOUT = 30; //second
         public const string DEFAULT_CHARSET = "UTF-8";
         public const bool DEFAULT_HTTP_ANTI_STEAL_TOKEN = false;
         public const string DEFAULT_HTTP_SECRET_KEY = "FastDFS1234567890";
         public const int DEFAULT_HTTP_TRACKER_HTTP_PORT = 80;
+
+        public const bool DEFAULT_CONNECTION_POOL_ENABLED = true;
+        public const int DEFAULT_CONNECTION_POOL_MAX_COUNT_PER_ENTRY = 100;
+        public const int DEFAULT_CONNECTION_POOL_MAX_IDLE_TIME = 3600;//second
+        public const int DEFAULT_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS = 1000;//millisecond
+
         public static int g_connect_timeout = DEFAULT_CONNECT_TIMEOUT * 1000; //millisecond
         public static int g_network_timeout = DEFAULT_NETWORK_TIMEOUT * 1000; //millisecond
         public static Encoding g_charset = Encoding.GetEncoding(DEFAULT_CHARSET);
         public static bool g_anti_steal_token = DEFAULT_HTTP_ANTI_STEAL_TOKEN; //if anti-steal token
         public static string g_secret_key = DEFAULT_HTTP_SECRET_KEY; //generage token secret key
         public static int g_tracker_http_port = DEFAULT_HTTP_TRACKER_HTTP_PORT;
+
+        public static bool g_connection_pool_enabled = DEFAULT_CONNECTION_POOL_ENABLED;
+        public static int g_connection_pool_max_count_per_entry = DEFAULT_CONNECTION_POOL_MAX_COUNT_PER_ENTRY;
+        public static int g_connection_pool_max_idle_time = DEFAULT_CONNECTION_POOL_MAX_IDLE_TIME * 1000; //millisecond
+        public static int g_connection_pool_max_wait_time_in_ms = DEFAULT_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS; //millisecond
+
         public static TrackerGroup g_tracker_group;
         private ClientGlobal()
         {
@@ -106,6 +124,19 @@ namespace org.csource.fastdfs
             {
                 g_secret_key = iniReader.getStrValue("http.secret_key");
             }
+            g_connection_pool_enabled = iniReader.getBoolValue("connection_pool.enabled", DEFAULT_CONNECTION_POOL_ENABLED);
+            g_connection_pool_max_count_per_entry = iniReader.getIntValue("connection_pool.max_count_per_entry", DEFAULT_CONNECTION_POOL_MAX_COUNT_PER_ENTRY);
+            g_connection_pool_max_idle_time = iniReader.getIntValue("connection_pool.max_idle_time", DEFAULT_CONNECTION_POOL_MAX_IDLE_TIME);
+            if (g_connection_pool_max_idle_time < 0)
+            {
+                g_connection_pool_max_idle_time = DEFAULT_CONNECTION_POOL_MAX_IDLE_TIME;
+            }
+            g_connection_pool_max_idle_time *= 1000;
+            g_connection_pool_max_wait_time_in_ms = iniReader.getIntValue("connection_pool.max_wait_time_in_ms", DEFAULT_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS);
+            if (g_connection_pool_max_wait_time_in_ms < 0)
+            {
+                g_connection_pool_max_wait_time_in_ms = DEFAULT_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS;
+            }
         }
         /// <summary>
         /// load from properties file
@@ -145,6 +176,11 @@ namespace org.csource.fastdfs
             string httpAntiStealTokenConf = props.getProperty(PROP_KEY_HTTP_ANTI_STEAL_TOKEN);
             string httpSecretKeyConf = props.getProperty(PROP_KEY_HTTP_SECRET_KEY);
             string httpTrackerHttpPortConf = props.getProperty(PROP_KEY_HTTP_TRACKER_HTTP_PORT);
+            string poolEnabled = props.getProperty(PROP_KEY_CONNECTION_POOL_ENABLED);
+            string poolMaxCountPerEntry = props.getProperty(PROP_KEY_CONNECTION_POOL_MAX_COUNT_PER_ENTRY);
+            string poolMaxIdleTime = props.getProperty(PROP_KEY_CONNECTION_POOL_MAX_IDLE_TIME);
+            string poolMaxWaitTimeInMS = props.getProperty(PROP_KEY_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS);
+
             if (connectTimeoutInSecondsConf != null && connectTimeoutInSecondsConf.Trim().Length != 0)
             {
                 g_connect_timeout = int.Parse(connectTimeoutInSecondsConf.Trim()) * 1000;
@@ -168,6 +204,22 @@ namespace org.csource.fastdfs
             if (httpTrackerHttpPortConf != null && httpTrackerHttpPortConf.Trim().Length != 0)
             {
                 g_tracker_http_port = int.Parse(httpTrackerHttpPortConf);
+            }
+            if (poolEnabled != null && poolEnabled.Trim().Length != 0)
+            {
+                g_connection_pool_enabled = bool.Parse(poolEnabled);
+            }
+            if (poolMaxCountPerEntry != null && poolMaxCountPerEntry.Trim().Length != 0)
+            {
+                g_connection_pool_max_count_per_entry = int.Parse(poolMaxCountPerEntry);
+            }
+            if (poolMaxIdleTime != null && poolMaxIdleTime.Trim().Length != 0)
+            {
+                g_connection_pool_max_idle_time = int.Parse(poolMaxIdleTime) * 1000;
+            }
+            if (poolMaxWaitTimeInMS != null && poolMaxWaitTimeInMS.Trim().Length != 0)
+            {
+                g_connection_pool_max_wait_time_in_ms = int.Parse(poolMaxWaitTimeInMS);
             }
         }
 
@@ -205,6 +257,7 @@ namespace org.csource.fastdfs
         public static JavaSocket getSocket(string ip_addr, int port)
         {
             JavaSocket sock = new JavaSocket();
+            sock.SetReuseAddress(true);
             sock.SendTimeout = g_network_timeout;
             sock.Connect(ip_addr, port);
             return sock;
@@ -279,6 +332,11 @@ namespace org.csource.fastdfs
         {
             g_tracker_group = tracker_group;
         }
+        public static bool isG_connection_pool_enabled()
+        {
+            return g_connection_pool_enabled;
+        }
+
         public static string configInfo()
         {
             string trackerServers = "";
@@ -298,6 +356,10 @@ namespace org.csource.fastdfs
             + "\n  g_anti_steal_token = " + g_anti_steal_token
             + "\n  g_secret_key = " + g_secret_key
             + "\n  g_tracker_http_port = " + g_tracker_http_port
+            + "\n  g_connection_pool_enabled = " + g_connection_pool_enabled
+            + "\n  g_connection_pool_max_count_per_entry = " + g_connection_pool_max_count_per_entry
+            + "\n  g_connection_pool_max_idle_time(ms) = " + g_connection_pool_max_idle_time
+            + "\n  g_connection_pool_max_wait_time_in_ms(ms) = " + g_connection_pool_max_wait_time_in_ms
             + "\n  trackerServers = " + trackerServers
             + "\n}";
         }

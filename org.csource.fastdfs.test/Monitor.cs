@@ -53,7 +53,7 @@ namespace org.csource.fastdfs
                 Console.WriteLine("delete storage errno: " + tracker.getErrorCode());
                 */
 
-                TrackerServer trackerServer = tracker.getConnection();
+                TrackerServer trackerServer = tracker.getTrackerServer();
                 if (trackerServer == null)
                 {
                     return;
@@ -167,8 +167,7 @@ namespace org.csource.fastdfs
                         Console.WriteLine("\t\tlast_synced_timestamp = " + storageStat.getLastSyncedTimestamp().ToString(format) + getSyncedDelayString(storageStats, storageStat));
                     }
                 }
-
-                trackerServer.close();
+                 
             }
             catch (Exception ex)
             {

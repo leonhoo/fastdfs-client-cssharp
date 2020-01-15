@@ -37,5 +37,21 @@ namespace org.csource.fastdfs.encapsulation
         /// 指向您自己IP地址和端口，1-n个, 必填
         /// </summary> 
         public string[] TrackerServers { get; set; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool ConnectionPoolEnabled { get; set; } = ClientGlobal.DEFAULT_CONNECTION_POOL_ENABLED;
+        /// <summary>
+        /// 
+        /// </summary>
+        public int ConnectionPoolMaxCountPerEntry { get; set; } = ClientGlobal.DEFAULT_CONNECTION_POOL_MAX_COUNT_PER_ENTRY;
+        /// <summary>
+        /// 
+        /// </summary>
+        public int ConnectionPoolMaxIdleTime { get; set; } = ClientGlobal.DEFAULT_CONNECTION_POOL_MAX_IDLE_TIME;
+        /// <summary>
+        /// 
+        /// </summary>
+        public int ConnectionPoolMaxWaitTime { get; set; } = ClientGlobal.DEFAULT_CONNECTION_POOL_MAX_WAIT_TIME_IN_MS;
     }
 }

@@ -1,5 +1,6 @@
 using org.csource.fastdfs.common;
 using org.csource.fastdfs.encapsulation;
+using org.csource.fastdfs.pool;
 using System;
 using System.IO;
 
@@ -537,22 +538,18 @@ namespace org.csource.fastdfs
             modify_size, callback);
         }
 
-        /**
-   * regenerate filename for appender file
-   *
-   * @param group_name        the group name of appender file
-   * @param appender_filename the appender filename
-   * @return 2 elements string array if success:<br>
-   * <ul><li> results[0]: the group name to store the file</li></ul>
-   * <ul><li> results[1]: the new created filename</li></ul>
-   * return null if fail
-   */
+        /// <summary>
+        /// regenerate filename for appender file
+        /// </summary>
+        /// <param name="group_name">the group name of appender file</param>
+        /// <param name="appender_filename">appender_filename the appender filename</param>
+        /// <returns>2 elements string array if success: results[0]: the group name to store the file ; results[1]: the new created filename ;  return null if fail</returns>
         public string[] regenerate_appender_filename(string group_name, string appender_filename)
         {
             byte[] header;
-            bool bNewConnection;
-            JavaSocket storageSocket;
-            byte[] hexLenBytes;
+            bool bNewStorageServer;
+            Connection connection = null;
+            //byte[] hexLenBytes;
             byte[] appenderFilenameBytes;
             int offset;
             long body_len;
@@ -564,11 +561,11 @@ namespace org.csource.fastdfs
                 return null;
             }
 
-            bNewConnection = this.newUpdatableStorageConnection(group_name, appender_filename);
+            bNewStorageServer = this.newUpdatableStorageConnection(group_name, appender_filename);
 
             try
             {
-                storageSocket = this.storageServer.getSocket();
+                connection = this.storageServer.getConnection();
 
                 appenderFilenameBytes = ClientGlobal.g_charset.GetBytes(appender_filename);
                 body_len = appenderFilenameBytes.Length;
@@ -581,10 +578,10 @@ namespace org.csource.fastdfs
                 Array.Copy(appenderFilenameBytes, 0, wholePkg, offset, appenderFilenameBytes.Length);
                 offset += appenderFilenameBytes.Length;
 
-                var outStream = storageSocket.getOutputStream();
+                var outStream = connection.getOutputStream();
                 outStream.Write(wholePkg, 0, wholePkg.Length);
 
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                     ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -608,41 +605,23 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch (IOException ex1)
-                    {
-                        Console.WriteLine(ex1.Message + ex1.StackTrace);
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
                 }
-
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
+                }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch (IOException ex1)
-                    {
-                        Console.WriteLine(ex1.Message + ex1.StackTrace);
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -666,8 +645,8 @@ namespace org.csource.fastdfs
             byte[] ext_name_bs;
             string new_group_name;
             string remote_filename;
-            bool bNewConnection;
-            JavaSocket storageSocket;
+            bool bNewStorageServer;
+            Connection connection = null;
             byte[] sizeBytes;
             byte[] hexLenBytes;
             byte[] masterFilenameBytes;
@@ -679,15 +658,15 @@ namespace org.csource.fastdfs
             (prefix_name != null));
             if (bUploadSlave)
             {
-                bNewConnection = this.newUpdatableStorageConnection(group_name, master_filename);
+                bNewStorageServer = this.newUpdatableStorageConnection(group_name, master_filename);
             }
             else
             {
-                bNewConnection = this.newWritableStorageConnection(group_name);
+                bNewStorageServer = this.newWritableStorageConnection(group_name);
             }
             try
             {
-                storageSocket = this.storageServer.getSocket();
+                connection = this.storageServer.getConnection();
                 ext_name_bs = new byte[ProtoCommon.FDFS_FILE_EXT_NAME_MAX_LEN];
                 Arrays.fill(ext_name_bs, (byte)0);
                 if (file_ext_name != null && file_ext_name.Length > 0)
@@ -720,7 +699,8 @@ namespace org.csource.fastdfs
                 }
                 hexLenBytes = ProtoCommon.long2buff(file_size);
                 Array.Copy(hexLenBytes, 0, sizeBytes, offset, hexLenBytes.Length);
-                Stream outStream = storageSocket.getOutputStream();
+
+                Stream outStream = connection.getOutputStream();
                 header = ProtoCommon.packHeader(cmd, body_len, (byte)0);
                 byte[] wholePkg = new byte[(int)(header.Length + body_len - file_size)];
                 Array.Copy(header, 0, wholePkg, 0, header.Length);
@@ -757,7 +737,7 @@ namespace org.csource.fastdfs
                 {
                     return null;
                 }
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -800,38 +780,23 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -847,8 +812,8 @@ namespace org.csource.fastdfs
         long file_size, UploadCallback callback)
         {
             byte[] header;
-            bool bNewConnection;
-            JavaSocket storageSocket;
+            bool bNewStorageServer;
+            Connection connection = null;
             byte[] hexLenBytes;
             byte[] appenderFilenameBytes;
             int offset;
@@ -859,10 +824,10 @@ namespace org.csource.fastdfs
                 this.errno = ProtoCommon.ERR_NO_EINVAL;
                 return this.errno;
             }
-            bNewConnection = this.newUpdatableStorageConnection(group_name, appender_filename);
+            bNewStorageServer = this.newUpdatableStorageConnection(group_name, appender_filename);
             try
             {
-                storageSocket = this.storageServer.getSocket();
+                connection = this.storageServer.getConnection();
                 appenderFilenameBytes = ClientGlobal.g_charset.GetBytes(appender_filename);
                 body_len = 2 * ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE + appenderFilenameBytes.Length + file_size;
                 header = ProtoCommon.packHeader(ProtoCommon.STORAGE_PROTO_CMD_APPEND_FILE, body_len, (byte)0);
@@ -875,7 +840,7 @@ namespace org.csource.fastdfs
                 hexLenBytes = ProtoCommon.long2buff(file_size);
                 Array.Copy(hexLenBytes, 0, wholePkg, offset, hexLenBytes.Length);
                 offset += hexLenBytes.Length;
-                Stream outStream = storageSocket.getOutputStream();
+                Stream outStream = connection.getOutputStream();
                 Array.Copy(appenderFilenameBytes, 0, wholePkg, offset, appenderFilenameBytes.Length);
                 offset += appenderFilenameBytes.Length;
                 outStream.Write(wholePkg, 0, wholePkg.Length);
@@ -883,7 +848,7 @@ namespace org.csource.fastdfs
                 {
                     return this.errno;
                 }
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.STORAGE_PROTO_CMD_RESP, 0);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -894,37 +859,44 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
+                releaseConnection(connection, bNewStorageServer);
+            }
+        }
+
+        private void releaseConnection(Connection connection, bool bNewStorageServer)
+        {
+            try
+            {
+                if (connection != null)
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.release();
+                }
+            }
+            catch (IOException ex1)
+            {
+                throw ex1;
+            }
+            finally
+            {
+                if (bNewStorageServer)
+                {
+                    this.storageServer = null;
                 }
             }
         }
@@ -942,8 +914,8 @@ namespace org.csource.fastdfs
         long file_offset, long modify_size, UploadCallback callback)
         {
             byte[] header;
-            bool bNewConnection;
-            JavaSocket storageSocket;
+            bool bNewStorageServer;
+            Connection connection = null;
             byte[] hexLenBytes;
             byte[] appenderFilenameBytes;
             int offset;
@@ -954,10 +926,10 @@ namespace org.csource.fastdfs
                 this.errno = ProtoCommon.ERR_NO_EINVAL;
                 return this.errno;
             }
-            bNewConnection = this.newUpdatableStorageConnection(group_name, appender_filename);
+            bNewStorageServer = this.newUpdatableStorageConnection(group_name, appender_filename);
             try
             {
-                storageSocket = this.storageServer.getSocket();
+                connection = this.storageServer.getConnection();
                 appenderFilenameBytes = ClientGlobal.g_charset.GetBytes(appender_filename);
                 body_len = 3 * ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE + appenderFilenameBytes.Length + modify_size;
                 header = ProtoCommon.packHeader(ProtoCommon.STORAGE_PROTO_CMD_MODIFY_FILE, body_len, (byte)0);
@@ -973,7 +945,7 @@ namespace org.csource.fastdfs
                 hexLenBytes = ProtoCommon.long2buff(modify_size);
                 Array.Copy(hexLenBytes, 0, wholePkg, offset, hexLenBytes.Length);
                 offset += hexLenBytes.Length;
-                Stream outStream = storageSocket.getOutputStream();
+                Stream outStream = connection.getOutputStream();
                 Array.Copy(appenderFilenameBytes, 0, wholePkg, offset, appenderFilenameBytes.Length);
                 offset += appenderFilenameBytes.Length;
                 outStream.Write(wholePkg, 0, wholePkg.Length);
@@ -981,7 +953,7 @@ namespace org.csource.fastdfs
                 {
                     return this.errno;
                 }
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.STORAGE_PROTO_CMD_RESP, 0);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -992,40 +964,24 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch (Exception ex1)
-                    {
-                        Console.WriteLine(ex1.Message + ex1.StackTrace);
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
                 }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
+                }
+
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch (Exception ex1)
-                    {
-                        Console.WriteLine(ex1.Message + ex1.StackTrace);
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1037,50 +993,36 @@ namespace org.csource.fastdfs
         /// <returns> 0 for success, none zero for fail (error code)</returns>
         public int delete_file(string group_name, string remote_filename)
         {
-            bool bNewConnection = this.newUpdatableStorageConnection(group_name, remote_filename);
-            JavaSocket storageSocket = this.storageServer.getSocket();
+            bool bNewStorageServer = this.newUpdatableStorageConnection(group_name, remote_filename);
+            Connection connection = this.storageServer.getConnection();
+
             try
             {
-                this.send_package(ProtoCommon.STORAGE_PROTO_CMD_DELETE_FILE, group_name, remote_filename);
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
-                ProtoCommon.STORAGE_PROTO_CMD_RESP, 0);
+                this.send_package(ProtoCommon.STORAGE_PROTO_CMD_DELETE_FILE, group_name, remote_filename, connection);
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
+                    ProtoCommon.STORAGE_PROTO_CMD_RESP, 0);
                 this.errno = pkgInfo.errno;
                 return pkgInfo.errno;
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1107,8 +1049,8 @@ namespace org.csource.fastdfs
         long truncated_file_size)
         {
             byte[] header;
-            bool bNewConnection;
-            JavaSocket storageSocket;
+            bool bNewStorageServer;
+            Connection connection = null;
             byte[] hexLenBytes;
             byte[] appenderFilenameBytes;
             int offset;
@@ -1119,10 +1061,11 @@ namespace org.csource.fastdfs
                 this.errno = ProtoCommon.ERR_NO_EINVAL;
                 return this.errno;
             }
-            bNewConnection = this.newUpdatableStorageConnection(group_name, appender_filename);
+            bNewStorageServer = this.newUpdatableStorageConnection(group_name, appender_filename);
+
             try
             {
-                storageSocket = this.storageServer.getSocket();
+                connection = this.storageServer.getConnection();
                 appenderFilenameBytes = ClientGlobal.g_charset.GetBytes(appender_filename);
                 body_len = 2 * ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE + appenderFilenameBytes.Length;
                 header = ProtoCommon.packHeader(ProtoCommon.STORAGE_PROTO_CMD_TRUNCATE_FILE, body_len, (byte)0);
@@ -1135,49 +1078,34 @@ namespace org.csource.fastdfs
                 hexLenBytes = ProtoCommon.long2buff(truncated_file_size);
                 Array.Copy(hexLenBytes, 0, wholePkg, offset, hexLenBytes.Length);
                 offset += hexLenBytes.Length;
-                Stream outStream = storageSocket.getOutputStream();
+                Stream outStream = connection.getOutputStream();
                 Array.Copy(appenderFilenameBytes, 0, wholePkg, offset, appenderFilenameBytes.Length);
                 offset += appenderFilenameBytes.Length;
                 outStream.Write(wholePkg, 0, wholePkg.Length);
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.STORAGE_PROTO_CMD_RESP, 0);
                 this.errno = pkgInfo.errno;
                 return pkgInfo.errno;
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1204,14 +1132,16 @@ namespace org.csource.fastdfs
         /// <returns> file content/buff, return null if fail</returns>
         public byte[] download_file(string group_name, string remote_filename, long file_offset, long download_bytes)
         {
-            bool bNewConnection = this.newReadableStorageConnection(group_name, remote_filename);
-            JavaSocket storageSocket = this.storageServer.getSocket();
+            bool bNewStorageServer = this.newReadableStorageConnection(group_name, remote_filename);
+            Connection connection = this.storageServer.getConnection();
+
             try
             {
                 ProtoCommon.RecvPackageInfo pkgInfo;
-                this.send_download_package(group_name, remote_filename, file_offset, download_bytes);
-                pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
-                ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
+
+                this.send_download_package(group_name, remote_filename, file_offset, download_bytes, connection);
+                pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
+                    ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
                 {
@@ -1221,38 +1151,23 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1285,8 +1200,8 @@ namespace org.csource.fastdfs
         long file_offset, long download_bytes,
         string local_filename)
         {
-            bool bNewConnection = this.newReadableStorageConnection(group_name, remote_filename);
-            JavaSocket storageSocket = this.storageServer.getSocket();
+            bool bNewStorageServer = this.newReadableStorageConnection(group_name, remote_filename);
+            Connection connection = this.storageServer.getConnection();
             try
             {
                 ProtoCommon.RecvHeaderInfo header;
@@ -1294,8 +1209,9 @@ namespace org.csource.fastdfs
                 try
                 {
                     this.errno = 0;
-                    this.send_download_package(group_name, remote_filename, file_offset, download_bytes);
-                    Stream inStream = storageSocket.getInputStream();
+                    this.send_download_package(group_name, remote_filename, file_offset, download_bytes, connection);
+
+                    Stream inStream = connection.getInputStream();
                     header = ProtoCommon.recvHeader(inStream, ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
                     this.errno = header.errno;
                     if (header.errno != 0)
@@ -1337,38 +1253,23 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1402,13 +1303,14 @@ namespace org.csource.fastdfs
         DownloadCallback callback)
         {
             int result;
-            bool bNewConnection = this.newReadableStorageConnection(group_name, remote_filename);
-            JavaSocket storageSocket = this.storageServer.getSocket();
+            bool bNewStorageServer = this.newReadableStorageConnection(group_name, remote_filename);
+            Connection connection = this.storageServer.getConnection();
             try
             {
                 ProtoCommon.RecvHeaderInfo header;
-                this.send_download_package(group_name, remote_filename, file_offset, download_bytes);
-                Stream inStream = storageSocket.getInputStream();
+                this.send_download_package(group_name, remote_filename, file_offset, download_bytes, connection);
+
+                Stream inStream = connection.getInputStream();
                 header = ProtoCommon.recvHeader(inStream, ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
                 this.errno = header.errno;
                 if (header.errno != 0)
@@ -1437,38 +1339,23 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1480,14 +1367,14 @@ namespace org.csource.fastdfs
         /// <returns> meta info array, return null if fail</returns>
         public NameValuePair[] get_metadata(string group_name, string remote_filename)
         {
-            bool bNewConnection = this.newUpdatableStorageConnection(group_name, remote_filename);
-            JavaSocket storageSocket = this.storageServer.getSocket();
+            bool bNewStorageServer = this.newUpdatableStorageConnection(group_name, remote_filename);
+            Connection connection = this.storageServer.getConnection();
             try
             {
                 ProtoCommon.RecvPackageInfo pkgInfo;
-                this.send_package(ProtoCommon.STORAGE_PROTO_CMD_GET_METADATA, group_name, remote_filename);
-                pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
-                ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
+                this.send_package(ProtoCommon.STORAGE_PROTO_CMD_GET_METADATA, group_name, remote_filename, connection);
+                pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
+                    ProtoCommon.STORAGE_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
                 {
@@ -1497,38 +1384,23 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1543,8 +1415,8 @@ namespace org.csource.fastdfs
         public int set_metadata(string group_name, string remote_filename,
         NameValuePair[] meta_list, byte op_flag)
         {
-            bool bNewConnection = this.newUpdatableStorageConnection(group_name, remote_filename);
-            JavaSocket storageSocket = this.storageServer.getSocket();
+            bool bNewStorageServer = this.newUpdatableStorageConnection(group_name, remote_filename);
+            Connection connection = this.storageServer.getConnection();
             try
             {
                 byte[] header;
@@ -1585,7 +1457,7 @@ namespace org.csource.fastdfs
                 header = ProtoCommon.packHeader(ProtoCommon.STORAGE_PROTO_CMD_SET_METADATA,
                 2 * ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE + 1 + groupBytes.Length
                 + filenameBytes.Length + meta_buff.Length, (byte)0);
-                Stream outStream = storageSocket.getOutputStream();
+                Stream outStream = connection.getOutputStream();
                 byte[] wholePkg = new byte[header.Length + sizeBytes.Length + 1 + groupBytes.Length + filenameBytes.Length];
                 Array.Copy(header, 0, wholePkg, 0, header.Length);
                 Array.Copy(sizeBytes, 0, wholePkg, header.Length, sizeBytes.Length);
@@ -1597,45 +1469,30 @@ namespace org.csource.fastdfs
                 {
                     outStream.Write(meta_buff, 0, meta_buff.Length);
                 }
-                pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.STORAGE_PROTO_CMD_RESP, 0);
                 this.errno = pkgInfo.errno;
                 return pkgInfo.errno;
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1714,8 +1571,8 @@ namespace org.csource.fastdfs
         /// <returns> FileInfo object for success, return null for fail</returns>
         public FileInfo query_file_info(string group_name, string remote_filename)
         {
-            bool bNewConnection = this.newUpdatableStorageConnection(group_name, remote_filename);
-            JavaSocket storageSocket = this.storageServer.getSocket();
+            bool bNewStorageServer = this.newUpdatableStorageConnection(group_name, remote_filename);
+            Connection connection = this.storageServer.getConnection();
             try
             {
                 byte[] header;
@@ -1739,13 +1596,13 @@ namespace org.csource.fastdfs
                 Array.Copy(bs, 0, groupBytes, 0, groupLen);
                 header = ProtoCommon.packHeader(ProtoCommon.STORAGE_PROTO_CMD_QUERY_FILE_INFO,
                 +groupBytes.Length + filenameBytes.Length, (byte)0);
-                Stream outStream = storageSocket.getOutputStream();
+                Stream outStream = connection.getOutputStream();
                 byte[] wholePkg = new byte[header.Length + groupBytes.Length + filenameBytes.Length];
                 Array.Copy(header, 0, wholePkg, 0, header.Length);
                 Array.Copy(groupBytes, 0, wholePkg, header.Length, groupBytes.Length);
                 Array.Copy(filenameBytes, 0, wholePkg, header.Length + groupBytes.Length, filenameBytes.Length);
                 outStream.Write(wholePkg, 0, wholePkg.Length);
-                pkgInfo = ProtoCommon.recvPackage(storageSocket.getInputStream(),
+                pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.STORAGE_PROTO_CMD_RESP,
                 3 * ProtoCommon.FDFS_PROTO_PKG_LEN_SIZE +
                 ProtoCommon.FDFS_IPADDR_SIZE);
@@ -1764,38 +1621,23 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
-                {
-                    try
-                    {
-                        this.storageServer.close();
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        this.storageServer = null;
-                    }
-                }
+                releaseConnection(connection, bNewStorageServer);
             }
         }
 
@@ -1876,7 +1718,7 @@ namespace org.csource.fastdfs
         /// <param name="cmd">which command to send</param>
         /// <param name="group_name">the group name of storage server</param>
         /// <param name="remote_filename">filename on storage server</param>
-        protected void send_package(byte cmd, string group_name, string remote_filename)
+        protected void send_package(byte cmd, string group_name, string remote_filename, Connection connection)
         {
             byte[] header;
             byte[] groupBytes;
@@ -1901,7 +1743,7 @@ namespace org.csource.fastdfs
             Array.Copy(header, 0, wholePkg, 0, header.Length);
             Array.Copy(groupBytes, 0, wholePkg, header.Length, groupBytes.Length);
             Array.Copy(filenameBytes, 0, wholePkg, header.Length + groupBytes.Length, filenameBytes.Length);
-            this.storageServer.getSocket().getOutputStream().Write(wholePkg, 0, wholePkg.Length);
+            connection.getOutputStream().Write(wholePkg, 0, wholePkg.Length);
         }
 
         /// <summary>
@@ -1911,7 +1753,7 @@ namespace org.csource.fastdfs
         /// <param name="remote_filename">filename on storage server</param>
         /// <param name="file_offset">the start offset of the file</param>
         /// <param name="download_bytes">download bytes</param>
-        protected void send_download_package(string group_name, string remote_filename, long file_offset, long download_bytes)
+        protected void send_download_package(string group_name, string remote_filename, long file_offset, long download_bytes, Connection connection)
         {
             byte[] header;
             byte[] bsOffset;
@@ -1943,20 +1785,23 @@ namespace org.csource.fastdfs
             Array.Copy(bsDownBytes, 0, wholePkg, header.Length + bsOffset.Length, bsDownBytes.Length);
             Array.Copy(groupBytes, 0, wholePkg, header.Length + bsOffset.Length + bsDownBytes.Length, groupBytes.Length);
             Array.Copy(filenameBytes, 0, wholePkg, header.Length + bsOffset.Length + bsDownBytes.Length + groupBytes.Length, filenameBytes.Length);
-            this.storageServer.getSocket().getOutputStream().Write(wholePkg, 0, wholePkg.Length);
+            connection.getOutputStream().Write(wholePkg, 0, wholePkg.Length);
         }
         public bool isConnected()
         {
-            return trackerServer.isConnected();
+            return trackerServer != null;
         }
+
         public bool isAvaliable()
         {
-            return trackerServer.isAvaliable();
+            return trackerServer != null;
         }
+
         public void close()
         {
-            trackerServer.close();
+            trackerServer = null;
         }
+
         public TrackerServer getTrackerServer()
         {
             return trackerServer;

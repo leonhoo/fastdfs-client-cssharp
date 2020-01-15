@@ -1,4 +1,5 @@
 using org.csource.fastdfs.encapsulation;
+using org.csource.fastdfs.pool;
 using System.IO;
 using System.Net.Sockets;
 
@@ -13,7 +14,6 @@ namespace org.csource.fastdfs
     /// </summary>
     public class TrackerServer
     {
-        protected JavaSocket sock;
         protected InetSocketAddress inetSockAddr;
 
         /// <summary>
@@ -21,23 +21,23 @@ namespace org.csource.fastdfs
         /// </summary>
         /// <param name="sock">JavaSocket of server</param>
         /// <param name="inetSockAddr">the server info</param>
-        public TrackerServer(JavaSocket sock, InetSocketAddress inetSockAddr)
+        public TrackerServer(InetSocketAddress inetSockAddr)
         {
-            this.sock = sock;
             this.inetSockAddr = inetSockAddr;
         }
 
-        /// <summary>
-        /// get the connected socket
-        /// </summary>
-        /// <returns> the socket</returns>
-        public JavaSocket getSocket()
+        public Connection getConnection()
         {
-            if (this.sock == null)
+            Connection connection;
+            if (ClientGlobal.g_connection_pool_enabled)
             {
-                this.sock = ClientGlobal.getSocket(this.inetSockAddr);
+                connection = ConnectionPool.getConnection(this.inetSockAddr);
             }
-            return this.sock;
+            else
+            {
+                connection = ConnectionFactory.create(this.inetSockAddr);
+            }
+            return connection;
         }
 
         /// <summary>
@@ -47,72 +47,6 @@ namespace org.csource.fastdfs
         public InetSocketAddress getInetSocketAddress()
         {
             return this.inetSockAddr;
-        }
-        public Stream getOutputStream()
-        {
-            return this.sock.getOutputStream();
-        }
-        public Stream getInputStream()
-        {
-            return this.sock.getInputStream();
-        }
-        public void close()
-        {
-            if (this.sock != null)
-            {
-                try
-                {
-                    ProtoCommon.closeSocket(this.sock);
-                }
-                finally
-                {
-                    this.sock = null;
-                }
-            }
-        }
-        protected void finalize()
-        {
-            this.close();
-        }
-        public bool isConnected()
-        {
-            bool isConnected = false;
-            if (sock != null)
-            {
-                if (sock.Connected)
-                {
-                    isConnected = true;
-                }
-            }
-            return isConnected;
-        }
-        public bool isAvaliable()
-        {
-            if (isConnected())
-            {
-                if (sock.getPort() == 0)
-                {
-                    return false;
-                }
-                if (sock.getInetAddress() == null)
-                {
-                    return false;
-                }
-                if (sock.getRemoteSocketAddress() == null)
-                {
-                    return false;
-                }
-                if (sock.isInputShutdown())
-                {
-                    return false;
-                }
-                if (sock.isOutputShutdown())
-                {
-                    return false;
-                }
-                return true;
-            }
-            return false;
         }
     }
 }

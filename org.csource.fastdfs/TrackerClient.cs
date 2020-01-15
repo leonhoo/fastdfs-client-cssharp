@@ -1,4 +1,5 @@
 using org.csource.fastdfs.encapsulation;
+using org.csource.fastdfs.pool;
 using System;
 using System.IO;
 
@@ -46,9 +47,9 @@ namespace org.csource.fastdfs
         /// get a connection to tracker server
         /// </summary>
         /// <returns> tracker server JavaSocket object, return null if fail</returns>
-        public TrackerServer getConnection()
+        public TrackerServer getTrackerServer()
         {
-            return this.tracker_group.getConnection();
+            return this.tracker_group.getTrackerServer();
         }
 
         /// <summary>
@@ -75,24 +76,14 @@ namespace org.csource.fastdfs
             int port;
             byte cmd;
             int out_len;
-            bool bNewConnection;
             byte store_path;
-            JavaSocket trackerSocket;
+            Connection connection;
             if (trackerServer == null)
             {
-                trackerServer = getConnection();
-                if (trackerServer == null)
-                {
-                    return null;
-                }
-                bNewConnection = true;
+                trackerServer = getTrackerServer();
             }
-            else
-            {
-                bNewConnection = false;
-            }
-            trackerSocket = trackerServer.getSocket();
-            Stream outStream = trackerSocket.getOutputStream();
+            connection = trackerServer.getConnection();
+            var outStream = connection.getOutputStream();
             try
             {
                 if (groupName == null || groupName.Length == 0)
@@ -126,7 +117,7 @@ namespace org.csource.fastdfs
                     Array.Copy(bs, 0, bGroupName, 0, group_len);
                     outStream.Write(bGroupName, 0, bGroupName.Length);
                 }
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(trackerSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.TRACKER_PROTO_CMD_RESP,
                 ProtoCommon.TRACKER_QUERY_STORAGE_STORE_BODY_LEN);
                 this.errno = pkgInfo.errno;
@@ -142,25 +133,27 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        trackerServer.close();
-                    }
-                    catch
-                    {
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
+                if (connection != null)
                 {
                     try
                     {
-                        trackerServer.close();
+                        connection.release();
                     }
                     catch
                     {
@@ -182,23 +175,17 @@ namespace org.csource.fastdfs
             int port;
             byte cmd;
             int out_len;
-            bool bNewConnection;
-            JavaSocket trackerSocket;
+            Connection connection;
             if (trackerServer == null)
             {
-                trackerServer = getConnection();
+                trackerServer = getTrackerServer();
                 if (trackerServer == null)
                 {
                     return null;
                 }
-                bNewConnection = true;
             }
-            else
-            {
-                bNewConnection = false;
-            }
-            trackerSocket = trackerServer.getSocket();
-            Stream outStream = trackerSocket.getOutputStream();
+            connection = trackerServer.getConnection();
+            Stream outStream = connection.getOutputStream();
             try
             {
                 if (groupName == null || groupName.Length == 0)
@@ -232,7 +219,7 @@ namespace org.csource.fastdfs
                     Array.Copy(bs, 0, bGroupName, 0, group_len);
                     outStream.Write(bGroupName, 0, bGroupName.Length);
                 }
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(trackerSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.TRACKER_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -272,25 +259,27 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        trackerServer.close();
-                    }
-                    catch
-                    {
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
+                if (connection != null)
                 {
                     try
                     {
-                        trackerServer.close();
+                        connection.release();
                     }
                     catch
                     {
@@ -375,23 +364,17 @@ namespace org.csource.fastdfs
             int len;
             string ip_addr;
             int port;
-            bool bNewConnection;
-            JavaSocket trackerSocket;
+            Connection connection;
             if (trackerServer == null)
             {
-                trackerServer = getConnection();
+                trackerServer = getTrackerServer();
                 if (trackerServer == null)
                 {
                     return null;
                 }
-                bNewConnection = true;
             }
-            else
-            {
-                bNewConnection = false;
-            }
-            trackerSocket = trackerServer.getSocket();
-            Stream outStream = trackerSocket.getOutputStream();
+            connection = trackerServer.getConnection();
+            Stream outStream = connection.getOutputStream();
             try
             {
                 bs = ClientGlobal.g_charset.GetBytes(groupName);
@@ -413,7 +396,7 @@ namespace org.csource.fastdfs
                 Array.Copy(bGroupName, 0, wholePkg, header.Length, bGroupName.Length);
                 Array.Copy(bFileName, 0, wholePkg, header.Length + bGroupName.Length, bFileName.Length);
                 outStream.Write(wholePkg, 0, wholePkg.Length);
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(trackerSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.TRACKER_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -444,25 +427,28 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        trackerServer.close();
-                    }
-                    catch
-                    {
-                    }
+                    connection.close();
                 }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
+                }
+
                 throw ex;
             }
             finally
             {
-                if (bNewConnection)
+                if (connection != null)
                 {
                     try
                     {
-                        trackerServer.close();
+                        connection.release();
                     }
                     catch
                     {
@@ -516,30 +502,24 @@ namespace org.csource.fastdfs
             //string ip_addr;
             //int port;
             //byte cmd;
-            //int out_len;
-            bool bNewConnection;
+            //int out_len; 
             //byte store_path;
-            JavaSocket trackerSocket;
+            Connection connection;
             if (trackerServer == null)
             {
-                trackerServer = getConnection();
+                trackerServer = getTrackerServer();
                 if (trackerServer == null)
                 {
                     return null;
                 }
-                bNewConnection = true;
             }
-            else
-            {
-                bNewConnection = false;
-            }
-            trackerSocket = trackerServer.getSocket();
-            Stream outStream = trackerSocket.getOutputStream();
+            connection = trackerServer.getConnection();
+            Stream outStream = connection.getOutputStream();
             try
             {
                 header = ProtoCommon.packHeader(ProtoCommon.TRACKER_PROTO_CMD_SERVER_LIST_GROUP, 0, (byte)0);
                 outStream.Write(header, 0, header.Length);
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(trackerSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.TRACKER_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -551,30 +531,33 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        trackerServer.close();
-                    }
-                    catch
-                    {
-                    }
+                    connection.close();
+                }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+                finally
+                {
+                    connection = null;
                 }
                 throw ex;
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 this.errno = ProtoCommon.ERR_NO_EINVAL;
-                throw ex;
+                return null;
             }
             finally
             {
-                if (bNewConnection)
+                if (connection != null)
                 {
                     try
                     {
-                        trackerServer.close();
+                        connection.release();
                     }
                     catch
                     {
@@ -609,23 +592,17 @@ namespace org.csource.fastdfs
             byte[] bGroupName;
             byte[] bs;
             int len;
-            bool bNewConnection;
-            JavaSocket trackerSocket;
+            Connection connection;
             if (trackerServer == null)
             {
-                trackerServer = getConnection();
+                trackerServer = getTrackerServer();
                 if (trackerServer == null)
                 {
                     return null;
                 }
-                bNewConnection = true;
             }
-            else
-            {
-                bNewConnection = false;
-            }
-            trackerSocket = trackerServer.getSocket();
-            Stream outStream = trackerSocket.getOutputStream();
+            connection = trackerServer.getConnection();
+            Stream outStream = connection.getOutputStream();
             try
             {
                 bs = ClientGlobal.g_charset.GetBytes(groupName);
@@ -668,7 +645,7 @@ namespace org.csource.fastdfs
                     Array.Copy(bIpAddr, 0, wholePkg, header.Length + bGroupName.Length, ipAddrLen);
                 }
                 outStream.Write(wholePkg, 0, wholePkg.Length);
-                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(trackerSocket.getInputStream(),
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
                 ProtoCommon.TRACKER_PROTO_CMD_RESP, -1);
                 this.errno = pkgInfo.errno;
                 if (pkgInfo.errno != 0)
@@ -680,30 +657,30 @@ namespace org.csource.fastdfs
             }
             catch (IOException ex)
             {
-                if (!bNewConnection)
+                try
                 {
-                    try
-                    {
-                        trackerServer.close();
-                    }
-                    catch
-                    {
-                    }
+                    connection.close();
                 }
+                catch (IOException ex1)
+                {
+                    throw ex1;
+                }
+
                 throw ex;
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 this.errno = ProtoCommon.ERR_NO_EINVAL;
-                throw ex;
+                return null;
             }
             finally
             {
-                if (bNewConnection)
+                if (connection != null)
                 {
                     try
                     {
-                        trackerServer.close();
+                        connection.release();
                     }
                     catch
                     {
@@ -726,41 +703,64 @@ namespace org.csource.fastdfs
             byte[] bGroupName;
             byte[] bs;
             int len;
-            JavaSocket trackerSocket;
-            trackerSocket = trackerServer.getSocket();
-            Stream outStream = trackerSocket.getOutputStream();
-            bs = ClientGlobal.g_charset.GetBytes(groupName);
-            bGroupName = new byte[ProtoCommon.FDFS_GROUP_NAME_MAX_LEN];
-            if (bs.Length <= ProtoCommon.FDFS_GROUP_NAME_MAX_LEN)
+            Connection connection = null;
+
+            try
             {
-                len = bs.Length;
+                connection = trackerServer.getConnection();
+                Stream outStream = connection.getOutputStream();
+                bs = ClientGlobal.g_charset.GetBytes(groupName);
+                bGroupName = new byte[ProtoCommon.FDFS_GROUP_NAME_MAX_LEN];
+                if (bs.Length <= ProtoCommon.FDFS_GROUP_NAME_MAX_LEN)
+                {
+                    len = bs.Length;
+                }
+                else
+                {
+                    len = ProtoCommon.FDFS_GROUP_NAME_MAX_LEN;
+                }
+                Arrays.fill(bGroupName, (byte)0);
+                Array.Copy(bs, 0, bGroupName, 0, len);
+                int ipAddrLen;
+                byte[] bIpAddr = ClientGlobal.g_charset.GetBytes(storageIpAddr);
+                if (bIpAddr.Length < ProtoCommon.FDFS_IPADDR_SIZE)
+                {
+                    ipAddrLen = bIpAddr.Length;
+                }
+                else
+                {
+                    ipAddrLen = ProtoCommon.FDFS_IPADDR_SIZE - 1;
+                }
+                header = ProtoCommon.packHeader(ProtoCommon.TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, ProtoCommon.FDFS_GROUP_NAME_MAX_LEN + ipAddrLen, (byte)0);
+                byte[] wholePkg = new byte[header.Length + bGroupName.Length + ipAddrLen];
+                Array.Copy(header, 0, wholePkg, 0, header.Length);
+                Array.Copy(bGroupName, 0, wholePkg, header.Length, bGroupName.Length);
+                Array.Copy(bIpAddr, 0, wholePkg, header.Length + bGroupName.Length, ipAddrLen);
+                outStream.Write(wholePkg, 0, wholePkg.Length);
+                ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(connection.getInputStream(),
+                ProtoCommon.TRACKER_PROTO_CMD_RESP, 0);
+                this.errno = pkgInfo.errno;
+                return pkgInfo.errno == 0;
             }
-            else
+            catch (IOException e)
             {
-                len = ProtoCommon.FDFS_GROUP_NAME_MAX_LEN;
+                try
+                {
+                    connection.close();
+                }
+                finally
+                {
+                    connection = null;
+                }
+                throw e;
             }
-            Arrays.fill(bGroupName, (byte)0);
-            Array.Copy(bs, 0, bGroupName, 0, len);
-            int ipAddrLen;
-            byte[] bIpAddr = ClientGlobal.g_charset.GetBytes(storageIpAddr);
-            if (bIpAddr.Length < ProtoCommon.FDFS_IPADDR_SIZE)
+            finally
             {
-                ipAddrLen = bIpAddr.Length;
+                if (connection != null)
+                {
+                    connection.release();
+                }
             }
-            else
-            {
-                ipAddrLen = ProtoCommon.FDFS_IPADDR_SIZE - 1;
-            }
-            header = ProtoCommon.packHeader(ProtoCommon.TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, ProtoCommon.FDFS_GROUP_NAME_MAX_LEN + ipAddrLen, (byte)0);
-            byte[] wholePkg = new byte[header.Length + bGroupName.Length + ipAddrLen];
-            Array.Copy(header, 0, wholePkg, 0, header.Length);
-            Array.Copy(bGroupName, 0, wholePkg, header.Length, bGroupName.Length);
-            Array.Copy(bIpAddr, 0, wholePkg, header.Length + bGroupName.Length, ipAddrLen);
-            outStream.Write(wholePkg, 0, wholePkg.Length);
-            ProtoCommon.RecvPackageInfo pkgInfo = ProtoCommon.recvPackage(trackerSocket.getInputStream(),
-            ProtoCommon.TRACKER_PROTO_CMD_RESP, 0);
-            this.errno = pkgInfo.errno;
-            return pkgInfo.errno == 0;
         }
 
         /// <summary>
@@ -792,47 +792,35 @@ namespace org.csource.fastdfs
             {
                 try
                 {
-                    trackerServer = trackerGroup.getConnection(serverIndex);
+                    trackerServer = trackerGroup.getTrackerServer(serverIndex);
                 }
                 catch
                 {
                     this.errno = ProtoCommon.ECONNREFUSED;
                     return false;
                 }
-                try
+
+                StructStorageStat[] storageStats = listStorages(trackerServer, groupName, storageIpAddr);
+                if (storageStats == null)
                 {
-                    StructStorageStat[] storageStats = listStorages(trackerServer, groupName, storageIpAddr);
-                    if (storageStats == null)
-                    {
-                        if (this.errno == ProtoCommon.ERR_NO_ENOENT)
-                        {
-                            notFoundCount++;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                    else if (storageStats.Length == 0)
+                    if (this.errno == ProtoCommon.ERR_NO_ENOENT)
                     {
                         notFoundCount++;
                     }
-                    else if (storageStats[0].getStatus() == ProtoCommon.FDFS_STORAGE_STATUS_ONLINE ||
-                    storageStats[0].getStatus() == ProtoCommon.FDFS_STORAGE_STATUS_ACTIVE)
+                    else
                     {
-                        this.errno = ProtoCommon.ERR_NO_EBUSY;
                         return false;
                     }
                 }
-                finally
+                else if (storageStats.Length == 0)
                 {
-                    try
-                    {
-                        trackerServer.close();
-                    }
-                    catch
-                    {
-                    }
+                    notFoundCount++;
+                }
+                else if (storageStats[0].getStatus() == ProtoCommon.FDFS_STORAGE_STATUS_ONLINE ||
+                storageStats[0].getStatus() == ProtoCommon.FDFS_STORAGE_STATUS_ACTIVE)
+                {
+                    this.errno = ProtoCommon.ERR_NO_EBUSY;
+                    return false;
                 }
             }
             if (notFoundCount == trackerGroup.tracker_servers.Length)
@@ -845,7 +833,7 @@ namespace org.csource.fastdfs
             {
                 try
                 {
-                    trackerServer = trackerGroup.getConnection(serverIndex);
+                    trackerServer = trackerGroup.getTrackerServer(serverIndex);
                 }
                 catch
                 {
@@ -853,31 +841,19 @@ namespace org.csource.fastdfs
                     this.errno = ProtoCommon.ECONNREFUSED;
                     return false;
                 }
-                try
+
+                if (!this.deleteStorage(trackerServer, groupName, storageIpAddr))
                 {
-                    if (!this.deleteStorage(trackerServer, groupName, storageIpAddr))
+                    if (this.errno != 0)
                     {
-                        if (this.errno != 0)
+                        if (this.errno == ProtoCommon.ERR_NO_ENOENT)
                         {
-                            if (this.errno == ProtoCommon.ERR_NO_ENOENT)
-                            {
-                                notFoundCount++;
-                            }
-                            else if (this.errno != ProtoCommon.ERR_NO_EALREADY)
-                            {
-                                return false;
-                            }
+                            notFoundCount++;
                         }
-                    }
-                }
-                finally
-                {
-                    try
-                    {
-                        trackerServer.close();
-                    }
-                    catch
-                    {
+                        else if (this.errno != ProtoCommon.ERR_NO_EALREADY)
+                        {
+                            return false;
+                        }
                     }
                 }
             }

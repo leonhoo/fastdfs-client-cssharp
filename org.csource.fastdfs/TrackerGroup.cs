@@ -33,34 +33,30 @@ namespace org.csource.fastdfs
         /// return connected tracker server
         /// </summary>
         /// <returns> connected tracker server, null for fail</returns>
-        public TrackerServer getConnection(int serverIndex)
+        public TrackerServer getTrackerServer(int serverIndex)
         {
-            JavaSocket sock = new JavaSocket();
-            sock.SetReuseAddress(true);
-            sock.setSoTimeout(ClientGlobal.g_network_timeout);
-            sock.Connect(this.tracker_servers[serverIndex], ClientGlobal.g_connect_timeout);
-            return new TrackerServer(sock, this.tracker_servers[serverIndex]);
+            return new TrackerServer(this.tracker_servers[serverIndex]);
         }
 
         /// <summary>
         /// return connected tracker server
         /// </summary>
         /// <returns> connected tracker server, null for fail</returns>
-        public TrackerServer getConnection()
+        public TrackerServer getTrackerServer()
         {
             int current_index;
             lock (this.locker)
             {
-                this.tracker_server_index++;
-                if (this.tracker_server_index >= this.tracker_servers.Length)
+                tracker_server_index++;
+                if (tracker_server_index >= tracker_servers.Length)
                 {
-                    this.tracker_server_index = 0;
+                    tracker_server_index = 0;
                 }
                 current_index = this.tracker_server_index;
             }
             try
             {
-                return this.getConnection(current_index);
+                return getTrackerServer(current_index);
             }
             catch
             {
@@ -74,7 +70,7 @@ namespace org.csource.fastdfs
                 }
                 try
                 {
-                    TrackerServer trackerServer = this.getConnection(i);
+                    TrackerServer trackerServer = getTrackerServer(i);
                     lock (this.locker)
                     {
                         if (this.tracker_server_index == current_index)
