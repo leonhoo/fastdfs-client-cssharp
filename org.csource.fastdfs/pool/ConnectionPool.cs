@@ -79,7 +79,7 @@ namespace org.csource.fastdfs.pool
             {
                 return null;
             }
-            return string.Format("%s:%s", socketAddress.Address, socketAddress.Port);
+            return string.Format("{0}:{1}", socketAddress.Address, socketAddress.Port);
         }
 
 
